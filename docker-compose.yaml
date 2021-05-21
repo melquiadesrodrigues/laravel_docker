@@ -2,28 +2,29 @@ version: '3.8'
 
 services:
   app:
-    image: melquiadesrodrigues/php-compose:8.0.1-fpm-alpine3.13
-    container_name: app
-    entrypoint: dockerize -template ./.docker/app/.env.template:.env  ./.docker/app/entrypoint.sh
+    image: melquiadesrodrigues/php-compose:8.0.6-fpm-alpine3.13
+    container_name: quickstart-app
+    entrypoint: dockerize -template ./.docker/app/.env.template:.env -template ./.docker/app/.env.phpunit:.env.phpunit -wait tcp://mysql:3306 -timeout 40s ./.docker/app/entrypoint.sh
     environment:
-      MYSQL_HOST: "mysql"
-      MYSQL_PORT: "3306"
-      MYSQL_DATABASE: "laravel"
-      MYSQL_USERNAME: "root"
-      MYSQL_PASSWORD: "12345"
-      REDIS_HOST: "redis"
-      REDIS_PORT: "6379"
+      _DB_HOST: "mysql"
+      _DB_TESTS_HOST: "mysql-tests"
+      _DB_DATABASE: "laravel_quickstart"
+      _DB_USERNAME: "root"
+      _DB_PASSWORD: "12345"
+    #ports:
+    #    - "9001:9001"
     volumes:
       - .:/var/www
+    #  - ./.docker/app/docker-xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
     networks:
-      - app-newtork
+      - quickstart-network
     depends_on:
       - mysql
       - redis
 
   nginx:
-    build: .docker/nginx
-    container_name: nginx
+    image: melquiadesrodrigues/nginx:stable-apline
+    container_name: quickstart-nginx
     restart: always
     tty: true
     ports:
@@ -35,14 +36,14 @@ services:
       PHP_HOST: "app"
       PHP_PORT: "9000"
     networks:
-      - app-newtork
+      - quickstart-network
     depends_on:
       - app
 
   mysql:
-    build: ./.docker/mysql
+    image: melquiadesrodrigues/mysql:5.7
     command: --innodb-use-native-aio=0
-    container_name: mysql
+    container_name: quickstart-mysql-tests
     restart: always
     tty: true
     ports:
@@ -50,20 +51,33 @@ services:
     volumes:
       - ./.docker/mysql/dbdata:/var/lib/mysql
     environment:
-      MYSQL_DATABASE: 'laravel'
+      MYSQL_DATABASE: 'laravel_quickstart'
       MYSQL_ROOT_PASSWORD: '12345'
-      MYSQL_USER: 'root'
     networks:
-      - app-newtork
+      - quickstart-network
+      
+  mysql-tests:
+    image: melquiadesrodrigues/mysql:5.7
+    command: --innodb-use-native-aio=0
+    container_name: quickstart-mysql
+    restart: always
+    tty: true
+    ports:
+      - "33061:3306"
+    environment:
+      MYSQL_DATABASE: 'laravel_quickstart'
+      MYSQL_ROOT_PASSWORD: '12345'
+    networks:
+      - quickstart-network
 
   redis:
      image: redis:alpine
-     container_name: redis
+     container_name: quickstart-redis
      expose:
        - 6379
      networks:
-       - app-newtork
+       - quickstart-network
 
 networks:
-  app-newtork:
+  quickstart-network:
     driver: bridge
