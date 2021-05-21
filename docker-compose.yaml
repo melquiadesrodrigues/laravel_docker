@@ -23,7 +23,7 @@ services:
       - redis
 
   nginx:
-    image: melquiadesrodrigues/nginx:stable-apline
+    image: melquiadesrodrigues/nginx:stable-alpine
     container_name: quickstart-nginx
     restart: always
     tty: true
